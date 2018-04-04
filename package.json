@@ -25,8 +25,9 @@
   "scripts": {
     "test": "mocha -c",
     "build-three": "browserify src/decimate.js -s decimate -o examples/three.js/decimate.js -t [ babelify ]",
-    "build": "npm run build-three",
-    "dev": "npm run build && budo examples/three.js/app.js:three-decimate.js -d examples/three.js --live -- -t babelify",
+    "build": "browserify examples/three.js/app.js -o examples/three.js/three-decimate.js -t [ babelify ]",
+    "build-dev": "npm run build-three",
+    "dev": "npm run build-dev && budo examples/three.js/app.js:three-decimate.js -d examples/three.js --live -- -t babelify",
     "prepublish": "babel src --out-dir lib && npm run build"
   },
   "repository": {
