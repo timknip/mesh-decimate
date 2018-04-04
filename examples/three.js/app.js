@@ -38,6 +38,11 @@ class GUIHelper {
                 material: new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: false} ),
                 has_texture: true
             },
+            box: {
+                geometry: new THREE.BoxGeometry( 0.5, 0.5, 0.5, 10, 10, 10 ),
+                material: new THREE.MeshBasicMaterial( { color: 0xaaaaaa, wireframe: true} ),
+                has_texture: true
+            },
             torus_knot: {
                 geometry: new THREE.TorusKnotGeometry( 0.3, 0.1, 256, 128),
                 material: new THREE.MeshNormalMaterial({wireframe:true, side:THREE.DoubleSide}),
@@ -50,7 +55,7 @@ class GUIHelper {
             }
         }
 
-        this.mesh = 'bunny';
+        this.mesh = 'box';
     }
 
     create_extrude () {
