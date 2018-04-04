@@ -1,0 +1,51 @@
+{
+  "name": "mesh-decimation",
+  "version": "1.0.0",
+  "description": "Mesh simplification using Quadric error metrics",
+  "main": "lib/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "extend": "^3.0.1",
+    "gl-matrix": "^2.4.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babelify": "^8.0.0",
+    "browserify": "^16.1.1",
+    "budo": "^11.2.0",
+    "expect.js": "^0.3.1",
+    "mocha": "^5.0.5",
+    "bunny": "^1.0.1",
+    "dat.gui": "^0.7.1",
+    "three": "^0.91.0"
+  },
+  "scripts": {
+    "test": "mocha -c",
+    "build-three": "browserify src/decimate.js -s decimate -o examples/three.js/decimate.js -t [ babelify ]",
+    "build": "npm run build-three",
+    "dev": "npm run build && budo examples/three.js/app.js:three-decimate.js -d examples/three.js --live -- -t babelify",
+    "prepublish": "babel src --out-dir lib && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/timknip/mesh-decimate.git"
+  },
+  "keywords": [
+    "mesh",
+    "decimate",
+    "decimation",
+    "simplify",
+    "quadric",
+    "hoppe",
+    "qem"
+  ],
+  "author": "Tim Knip <tim@floorplanner.com> (http://www.floorplanner.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/timknip/mesh-decimate/issues"
+  },
+  "homepage": "https://github.com/timknip/mesh-decimate"
+}
