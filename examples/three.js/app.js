@@ -25,7 +25,7 @@ class GUIHelper {
             },
             sphere: {
                 geometry: new THREE.SphereGeometry( 0.5, 32, 32 ),
-                material: new THREE.MeshBasicMaterial( { color: 0xaaaaaa, wireframe: true} ),
+                material: new THREE.MeshBasicMaterial( { color: 0xaaaaaa, wireframe: false} ),
                 has_texture: true
             },
             sphere64: {
@@ -50,7 +50,7 @@ class GUIHelper {
             }
         }
 
-        this.mesh = 'sphere';
+        this.mesh = 'bunny';
     }
 
     create_extrude () {
@@ -98,6 +98,7 @@ function init () {
     geometry = helper.meshes[helper.mesh].geometry;
     material = helper.meshes[helper.mesh].material;
 
+    helper.map = earthTexture;
     helper.decimate = geometry.faces.length;
 
     mesh = new THREE.Mesh( geometry, material );
