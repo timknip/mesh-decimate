@@ -16,6 +16,7 @@ class GUIHelper {
         this.use_map = true;
         this.map = null;
         this.log = 'decimate';
+        this.max_error = 1e-3;
 
         this.meshes = {
             bunny: {
@@ -39,7 +40,7 @@ class GUIHelper {
                 has_texture: true
             },
             box: {
-                geometry: new THREE.BoxGeometry( 0.5, 0.5, 0.5, 10, 10, 10 ),
+                geometry: new THREE.BoxGeometry( 0.5, 0.5, 0.5, 16, 16, 16 ),
                 material: new THREE.MeshBasicMaterial( { color: 0xaaaaaa, wireframe: true} ),
                 has_texture: true
             },
@@ -250,8 +251,10 @@ function initGUI () {
         tt.domElement.style.opacity = .2;
         tt.domElement.style.pointerEvents = "none";
         wl.setValue('working...');
-        worker.postMessage([geometry, v]);
+        worker.postMessage([geometry, v, helper.max_error]);
     });
+
+    gui.add(helper, 'max_error');
 
     worker.addEventListener('message', (e) => {
         mesh.geometry = decimated_to_geometry(e.data);

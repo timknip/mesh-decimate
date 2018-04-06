@@ -3,13 +3,14 @@ importScripts('decimate.js?rnd='+Math.random());
 self.addEventListener('message', function(e) {
     let g = e.data[0],
         target = e.data[1],
+        max_error = e.data[2],
         perc = 100 - Math.round((target / g.triangles.length) * 100),
         t = Date.now();
 
     console.log('worker: decimating ' + perc + '% (' + g.triangles.length + ' -> ' + target + ' triangles)');
 
     if (target < g.triangles.length) {
-        g = decimate.decimate(g, target);
+        g = decimate.decimate(g, target, max_error);
     }
 
     console.log('worker result: '+g.triangles.length+' triangles');

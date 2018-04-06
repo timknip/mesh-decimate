@@ -45,17 +45,21 @@ export class DecimateGeometry {
 
 }
 
-export function decimate (geometry, target = 100, worker = null) {
+export function decimate (geometry, target = 100, max_error = 0, worker = null) {
 
     let iteration = 1,
         result = geometry;
+
+    max_error = max_error > 0 ? max_error : Number.MAX_VALUE;
+
+    console.log('max_error', max_error);
 
     console.time('decimate');
     while (result.triangles.length > target) {
 
         let old = result.triangles.length;
 
-        result = iterate(result, target);
+        result = iterate(result, target, {max_error: max_error});
 
         if (worker) {
             result.took = 0;
@@ -134,7 +138,7 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
 
                             err2 = q.evaluate(vertices[i2]);
 
-                        if ( err1 < err2 ) {
+                        if ( err1 > err2 ) {
 
                             pair.target = i1;
 
@@ -177,8 +181,9 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
     function collapse_edge (edge) {
         let fa = triangles_at[edge.a],
             fb = triangles_at[edge.b],
+            all = fa.concat(fb),
             kill = fa.filter(i => fb.indexOf(i) !== -1),
-            adjust = Array.from(new Set(fa.concat(fb).filter(i => kill.indexOf(i) < 0)));
+            adjust = all.filter((f, i, arr) => arr.indexOf(f) === i);
 
         if (kill.some(i => deleted_triangles.indexOf(i) !== -1)) {
             return;
@@ -187,8 +192,6 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
         if (adjust.some(i => dirty_triangles.indexOf(i) !== -1)) {
             return;
         }
-
-        let all = fa.concat(fb);
 
         if (all.map(fid => triangles[fid]).some(({indices}) =>
             indices[0] === indices[1] ||
@@ -282,6 +285,8 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
 
         }
 
+        edge.a = edge.b;
+
         deleted_triangles = deleted_triangles.concat(kill);
         dirty_triangles = dirty_triangles.concat(adjust);
 
@@ -304,9 +309,11 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
         acc = {};
 
     // re-index triangles
-    triangles = triangles.filter(triangle => {
+    triangles = triangles.filter((triangle, i) => {
         let [a, b, c] = triangle.indices;
         if (a === b || b === c || c === a)
+            return false;
+        if (deleted_triangles.indexOf(i) >= 0)
             return false;
         if (!acc.hasOwnProperty(a)) {
             vout.push(vertices[a]);
