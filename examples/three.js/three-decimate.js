@@ -33,6 +33,7 @@ class GUIHelper {
         this.use_map = true;
         this.map = null;
         this.log = 'decimate';
+        this.max_error = 1e-3;
 
         this.meshes = {
             bunny: {
@@ -55,6 +56,11 @@ class GUIHelper {
                 material: new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: false }),
                 has_texture: true
             },
+            box: {
+                geometry: new THREE.BoxGeometry(0.5, 0.5, 0.5, 16, 16, 16),
+                material: new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true }),
+                has_texture: true
+            },
             torus_knot: {
                 geometry: new THREE.TorusKnotGeometry(0.3, 0.1, 256, 128),
                 material: new THREE.MeshNormalMaterial({ wireframe: true, side: THREE.DoubleSide }),
@@ -67,7 +73,7 @@ class GUIHelper {
             }
         };
 
-        this.mesh = 'bunny';
+        this.mesh = 'box';
     }
 
     create_extrude() {
@@ -258,8 +264,10 @@ function initGUI() {
         tt.domElement.style.opacity = .2;
         tt.domElement.style.pointerEvents = "none";
         wl.setValue('working...');
-        worker.postMessage([geometry, v]);
+        worker.postMessage([geometry, v, helper.max_error]);
     });
+
+    gui.add(helper, 'max_error');
 
     worker.addEventListener('message', e => {
         mesh.geometry = decimated_to_geometry(e.data);
@@ -56130,17 +56138,21 @@ class DecimateGeometry {
 }
 
 exports.DecimateGeometry = DecimateGeometry;
-function decimate(geometry, target = 100, worker = null) {
+function decimate(geometry, target = 100, max_error = 0, worker = null) {
 
     let iteration = 1,
         result = geometry;
+
+    max_error = max_error > 0 ? max_error : Number.MAX_VALUE;
+
+    console.log('max_error', max_error);
 
     console.time('decimate');
     while (result.triangles.length > target) {
 
         let old = result.triangles.length;
 
-        result = iterate(result, target);
+        result = iterate(result, target, { max_error: max_error });
 
         if (worker) {
             result.took = 0;
@@ -56213,7 +56225,7 @@ function iterate(geometry, target, options = DEFAULT_OPTIONS) {
                     let err1 = q.evaluate(vertices[i1]),
                         err2 = q.evaluate(vertices[i2]);
 
-                    if (err1 < err2) {
+                    if (err1 > err2) {
 
                         pair.target = i1;
 
@@ -56250,8 +56262,9 @@ function iterate(geometry, target, options = DEFAULT_OPTIONS) {
     function collapse_edge(edge) {
         let fa = triangles_at[edge.a],
             fb = triangles_at[edge.b],
+            all = fa.concat(fb),
             kill = fa.filter(i => fb.indexOf(i) !== -1),
-            adjust = Array.from(new Set(fa.concat(fb).filter(i => kill.indexOf(i) < 0)));
+            adjust = all.filter((f, i, arr) => arr.indexOf(f) === i);
 
         if (kill.some(i => deleted_triangles.indexOf(i) !== -1)) {
             return;
@@ -56260,8 +56273,6 @@ function iterate(geometry, target, options = DEFAULT_OPTIONS) {
         if (adjust.some(i => dirty_triangles.indexOf(i) !== -1)) {
             return;
         }
-
-        let all = fa.concat(fb);
 
         if (all.map(fid => triangles[fid]).some(({ indices }) => indices[0] === indices[1] || indices[1] === indices[2] || indices[2] === indices[0])) return;
 
@@ -56333,6 +56344,8 @@ function iterate(geometry, target, options = DEFAULT_OPTIONS) {
             }
         }
 
+        edge.a = edge.b;
+
         deleted_triangles = deleted_triangles.concat(kill);
         dirty_triangles = dirty_triangles.concat(adjust);
 
@@ -56354,9 +56367,10 @@ function iterate(geometry, target, options = DEFAULT_OPTIONS) {
         acc = {};
 
     // re-index triangles
-    triangles = triangles.filter(triangle => {
+    triangles = triangles.filter((triangle, i) => {
         let [a, b, c] = triangle.indices;
         if (a === b || b === c || c === a) return false;
+        if (deleted_triangles.indexOf(i) >= 0) return false;
         if (!acc.hasOwnProperty(a)) {
             vout.push(vertices[a]);
             acc[a] = vout.length - 1;
