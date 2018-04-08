@@ -5,16 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>THREE - mesh-decimate</title>
     <style>
-      html {
-        height: 100%;
-      }
-      body {
-        height: 100%;
-        margin: 0;
-      }
+    body {
+              color: #61443e;
+              font-family:Monospace;
+              font-size:13px;
+              text-align:center;
+              background-color: #aaccff;
+              margin: 0px;
+              overflow: hidden;
+          }
+          #info {
+              color: #ffffff;
+              position: absolute;
+              top: 0px; width: 100%;
+              padding: 5px;
+          }
+          #help {
+              text-align: left;
+              width: 20%;
+          }
     </style>
   </head>
   <body>
+    <div id="info">
+        <a href="https://github.com/timknip/mesh-decimate" target="_blank" rel="noopener">timknip</a> - mesh decimation
+        <div id="help">
+            <ul>
+                <li>agressiveness<ul><li>how agressive edges are collapsed</li></ul></li>
+                <li>update<ul><li>update mesh after ${update} iterations</li><li>lower values give better results</li></ul></li>
+                <li>recompute<ul><li>whether to recompute errors on each mesh update</li><li>enable for best results</li></ul></li>
+            </ul>
+        </div>
+    </div>
     <script src="three-decimate.js"></script>
   </body>
 </html>

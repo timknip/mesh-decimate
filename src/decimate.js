@@ -166,6 +166,25 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
 
         }, []);
 
+    // constrain boundaries
+    for ( let i = edges.length - 1; i >= 0; --i ) {
+        let e = edges[i],
+            fa = triangles_at[e.a],
+            fb = triangles_at[e.b],
+            kill = fa.filter(i => fb.indexOf(i) !== -1);
+
+        if (kill.length < 2) {
+
+            star[e.a].forEach(v => {
+                edge_list[v].forEach(e => e.error = Number.MAX_VALUE);
+            });
+
+            star[e.b].forEach(v => {
+                edge_list[v].forEach(e => e.error = Number.MAX_VALUE);
+            });
+        }
+    }
+
     vertices = vertices.concat(new_vertices);
 
     let deleted_vertices = vertices.map(v => false);
@@ -181,15 +200,14 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
     function collapse_edge (edge) {
         let fa = triangles_at[edge.a],
             fb = triangles_at[edge.b],
-            all = fa.concat(fb),
-            kill = fa.filter(i => fb.indexOf(i) !== -1),
-            adjust = all.filter((f, i, arr) => arr.indexOf(f) === i);
+            all = fa.concat(fb).filter((f, i, arr) => arr.indexOf(f) === i),
+            kill = fa.filter(i => fb.indexOf(i) !== -1);
 
         if (kill.some(i => deleted_triangles.indexOf(i) !== -1)) {
             return;
         }
 
-        if (adjust.some(i => dirty_triangles.indexOf(i) !== -1)) {
+        if (all.some(i => dirty_triangles.indexOf(i) !== -1)) {
             return;
         }
 
@@ -232,7 +250,7 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
                         vec3.normalize(ca, ca);
 
                         // angle acute?
-                        if (Math.abs(vec3.dot(ba, ca)) > 0.999)
+                        if (Math.abs(vec3.dot(ba, ca)) > 0.9999999)
                             return;
 
                         vec3.cross(n1, ba, ca);
@@ -288,7 +306,7 @@ function iterate (geometry, target, options = DEFAULT_OPTIONS) {
         edge.a = edge.b;
 
         deleted_triangles = deleted_triangles.concat(kill);
-        dirty_triangles = dirty_triangles.concat(adjust);
+        dirty_triangles = dirty_triangles.concat(all);
 
         return edge.target;
     }

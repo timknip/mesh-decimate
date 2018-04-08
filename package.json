@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "extend": "^3.0.1",
-    "gl-matrix": "^2.4.0"
+    "gl-matrix": "^2.4.0",
+    "teapot": "^1.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -24,7 +25,7 @@
   },
   "scripts": {
     "test": "mocha -c",
-    "build-three": "browserify src/decimate.js -s decimate -o examples/three.js/decimate.js -t [ babelify ]",
+    "build-three": "browserify src/simplify.js -s decimate -o examples/three.js/decimate.js -t [ babelify ]",
     "build": "browserify examples/three.js/app.js -o examples/three.js/three-decimate.js -t [ babelify ]",
     "build-dev": "npm run build-three",
     "dev": "npm run build-dev && budo examples/three.js/app.js:three-decimate.js -d examples/three.js --live -- -t babelify",
