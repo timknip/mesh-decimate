@@ -227,7 +227,7 @@ function simplify_mesh( target_count, options ) {
             break;
 
         // update mesh once in a while
-		if ( iteration % update === 0 ) {
+        if ( iteration % update === 0 ) {
 
             update_mesh( iteration, recompute );
 
@@ -262,8 +262,8 @@ function simplify_mesh( target_count, options ) {
 
                     v1 = vertices[ i1 ];
 
-				// Border check
-				if ( v0.border || v1.border )
+                // Border check
+                if ( v0.border || v1.border )
                     continue;
 
                 calculate_error( v0, v1, p );
@@ -299,7 +299,7 @@ function simplify_mesh( target_count, options ) {
 
                 v0.q.addSelf( v1.q );
 
-				let tstart = refs.length;
+                let tstart = refs.length;
 
                 deleted_triangles += update_triangles( i0, v0, deleted0 );
 
@@ -307,16 +307,16 @@ function simplify_mesh( target_count, options ) {
 
                 let tcount = refs.length - tstart;
 
-				v0.tstart = tstart;
+                v0.tstart = tstart;
 
-				v0.tcount = tcount;
+                v0.tcount = tcount;
 
-				break;
+                break;
 
             }
 
             // done?
-			if( triangle_count - deleted_triangles <= target_count )
+            if( triangle_count - deleted_triangles <= target_count )
                 break;
 
         }
@@ -455,7 +455,7 @@ function update_mesh ( iteration, recompute = false ) {
 
     if ( iteration > 0 )  { // compact triangles
 
-		let dst = 0;
+    let dst = 0;
 
         for ( i = 0; i < triangles.length; i++ ) {
 
@@ -469,16 +469,16 @@ function update_mesh ( iteration, recompute = false ) {
 
         triangles.splice( dst );
 
-	}
+    }
 
     //
-	// Init Quadrics by Plane & Edge Errors
-	//
-	// required at the beginning ( iteration == 0 )
-	// recomputing during the simplification is not required,
-	// but mostly improves the result for closed meshes
-	//
-	if( recompute || iteration === 0 ) {
+    // Init Quadrics by Plane & Edge Errors
+    //
+    // required at the beginning ( iteration == 0 )
+    // recomputing during the simplification is not required,
+    // but mostly improves the result for closed meshes
+    //
+    if( recompute || iteration === 0 ) {
 
         for ( i = 0; i < vertices.length; i++ ) {
 
@@ -534,7 +534,7 @@ function update_mesh ( iteration, recompute = false ) {
 
         }
 
-	} // if iteration == 0
+    } // if iteration == 0
 
     for ( i = 0; i < vertices.length; i++ ) {
 
