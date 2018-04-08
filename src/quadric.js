@@ -1,7 +1,7 @@
 /**
  * @module quadric
  *
- * @see https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification\
+ * @see https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification
  *
  * @see https://gist.github.com/zz85/a317597912d68cf046558006d7647381
  */
