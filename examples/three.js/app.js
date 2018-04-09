@@ -10,6 +10,40 @@ var camera, scene, renderer;
 var geometry, material, mesh;
 var worker = null;
 var tt = null;
+var emscipten_worker = null;
+
+const OBJ_DATA = `
+mtllib box.mtl
+o Cube
+v -1.000000 -1.000000 1.000000
+v -1.000000 1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v -1.000000 1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v 1.000000 1.000000 1.000000
+v 1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -1.000000
+vn -1.0000 0.0000 0.0000
+vn 0.0000 0.0000 -1.0000
+vn 1.0000 0.0000 0.0000
+vn 0.0000 0.0000 1.0000
+vn 0.0000 -1.0000 0.0000
+vn 0.0000 1.0000 0.0000
+usemtl None
+s off
+f 2//1 3//1 1//1
+f 4//2 7//2 3//2
+f 8//3 5//3 7//3
+f 6//4 1//4 5//4
+f 7//5 1//5 3//5
+f 4//6 6//6 8//6
+f 2//1 4//1 3//1
+f 4//2 8//2 7//2
+f 8//3 6//3 5//3
+f 6//4 2//4 1//4
+f 7//5 5//5 1//5
+f 4//6 2//6 6//6
+`;
 
 class GUIHelper {
 
@@ -23,12 +57,7 @@ class GUIHelper {
         this.agressiveness = 7;
         this.update = 5;
         this.recompute = false;
-
-        this.help = `
-        haha
-        hehe
-        hoho
-        `;
+        this.emscipten = false;
 
         var paramKlein = function (u, v, p) {
             u *= Math.PI;
@@ -127,11 +156,13 @@ class GUIHelper {
                 has_texture: false
             }
         }
-        console.log(new THREE.ParametricGeometry( paramFunction5, 25, 25 ))
+
         this.meshes.klein.geometry.scale(0.05, 0.05, 0.05)
+
         this.meshes.klein.geometry.rotateX(-Math.PI/3)
-//console.log(new THREE.ParametricGeometry( THREE.ParametricGeometries.klein, 25, 25 ))
+
         this.mesh = 'sphere';
+
     }
 
     create_lathe () {
@@ -209,15 +240,10 @@ function init () {
 
     worker = new Worker('./decimate-worker.js?rnd='+Math.random());
 
+    emscipten_worker = new Worker('./worker.js?rnd='+Math.random());
+
     initGUI();
 
-    /*
-    console.time('simplify');
-
-    simplify_three( mesh.geometry, 200 )
-
-    console.timeEnd('simplify');
-    */
 }
 
 function animate () {
@@ -253,6 +279,179 @@ function prepare_decimate_mesh (geometry) {
     g.vertices = geometry.vertices.map(v => [v.x, v.y, v.z]);
 
     return g;
+}
+
+function geometry_to_obj ( geometry ) {
+
+    let {vertices, faces, faceVertexUvs} = geometry,
+
+        hasUV = faceVertexUvs[0].length === faces.length,
+
+        obj = '';
+
+    for ( let i = 0; i < vertices.length; i++ ) {
+
+        let v = vertices[ i ];
+
+        obj += `v ${v.x} ${v.y} ${v.z}\n`;
+    }
+
+    if ( hasUV ) {
+
+        for ( let i = 0; i < faces.length; i++ ) {
+
+            let [a, b, c] = faceVertexUvs[ 0 ][ i ];
+
+            obj += `vt ${a.x} ${a.y}\n`;
+
+            obj += `vt ${b.x} ${b.y}\n`;
+
+            obj += `vt ${c.x} ${c.y}\n`;
+
+        }
+
+    }
+
+    for ( let i = 0; i < faces.length; i++ ) {
+
+        let {a, b, c} = faces[ i ],
+
+            j = ( i * 3 ) + 1;
+
+        if ( hasUV ) {
+
+            obj += `f ${a+1}/${j}/1 ${b+1}/${j+1}/1 ${c+1}/${j+2}/1\n`;
+
+        } else {
+
+            obj += `f ${a+1} ${b+1} ${c+1}\n`;
+
+        }
+
+    }
+
+    return obj;
+
+}
+
+function obj_to_geometry ( obj ) {
+
+    let geometry = new THREE.BufferGeometry(),
+
+        lines = obj.split( /[\r\n]/ ).filter( ln => ln &&  ln.length ),
+
+        vertices = [],
+
+        uvs = [],
+
+        uv_indices = [],
+
+        indices = [];
+
+    console.log( 'obj_to_geometry' );
+
+    console.time( 'parse obj' );
+
+    for ( let i = 0; i < lines.length; i++ ) {
+
+        let line = lines[ i ].split(/\s+/),
+
+            cmd = line.shift();
+
+        switch ( cmd ) {
+
+            case 'v':
+
+                vertices.push( line.map( parseFloat) );
+
+                break;
+
+            case 'vt':
+
+                uvs.push( line.map( parseFloat) );
+
+                break;
+
+            case 'f':
+
+                let face = line.map( f => f.split( '/' ).map( i => parseInt( i, 10 ) ) );
+
+                let vidx = face.map ( f => f[ 0 ] - 1 );
+
+                indices.push( vidx );
+
+                if ( face[ 0 ].length > 1 ) {
+
+                    let uvidx = face.map ( f => f[ 1 ] - 1 );
+
+                    uv_indices.push( uvidx );
+
+                }
+
+                break;
+
+            default:
+
+                break;
+        }
+
+    }
+
+    console.timeEnd( 'parse obj' );
+
+    console.time( 'obj => BufferGeometry' );
+
+    let num_faces = indices.length,
+        v = [],
+        uv = [],
+        idx = [];
+
+    for ( let i = 0; i < indices.length; i++ ) {
+
+        let [a, b, c] = indices[ i ],
+
+            v0 = vertices[ a ],
+
+            v1 = vertices[ b ],
+
+            v2 = vertices[ c ],
+
+            j = i * 3;
+
+        v.push( v0[0], v0[1], v0[2], v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
+
+        if ( uv_indices.length ) {
+
+            let [a, b, c] = uv_indices[ i ].map( i => uvs[ i ] );
+
+            uv.push( a[0], a[1], b[0], b[1], c[0], c[1] );
+
+        }
+
+        idx.push( j, j+1, j+2 );
+
+    }
+
+    geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array(v), 3 ) );
+
+    if ( uv_indices.length ) {
+
+        geometry.addAttribute( 'uv', new THREE.BufferAttribute( new Float32Array(uv), 2 ) );
+
+    }
+
+    geometry.setIndex( new THREE.BufferAttribute( new Uint32Array(idx), 1 ) );
+
+    geometry = (new THREE.Geometry()).fromBufferGeometry(geometry);
+
+    geometry.mergeVertices();
+
+    geometry.computeFaceNormals();
+
+    console.timeEnd( 'obj => BufferGeometry' );
+
+    return geometry;
+
 }
 
 function geometry_to_simplify ( geometry ) {
@@ -425,9 +624,9 @@ function create_bunny (bunny, scale = 0.07) {
 
     geometry = (new THREE.Geometry()).fromBufferGeometry(geometry);
 
+    geometry.mergeVertices();
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
-    geometry.mergeVertices();
 
     geometry.center();
 
@@ -439,6 +638,33 @@ function initGUI () {
     let gui = new dat.GUI();
 
     let wl = gui.add(helper, 'log');
+
+    gui.add(helper, 'emscipten').onChange((v) => {
+
+        if (v) {
+
+            ctl_update.domElement.style.opacity = .2;
+
+            ctl_update.domElement.style.pointerEvents = "none";
+
+            ctl_recompute.domElement.style.opacity = .2;
+
+            ctl_recompute.domElement.style.pointerEvents = "none";
+
+        } else {
+
+            ctl_update.domElement.style.opacity = 1;
+
+            ctl_update.domElement.style.pointerEvents = "auto";
+
+            ctl_recompute.domElement.style.opacity = 1;
+
+            ctl_recompute.domElement.style.pointerEvents = "auto";
+
+        }
+
+    });
+
     let wc = gui.add(material, 'wireframe').onChange((v) => {
         if (v) {
             mesh.material.map = null;
@@ -457,30 +683,54 @@ function initGUI () {
         wc.setValue(mesh.material.wireframe);
     });
     tt = gui.add(helper, 'decimate', 0, mesh.geometry.faces.length).step(1).onFinishChange((v) => {
-        let geometry = geometry_to_simplify(helper.meshes[helper.mesh].geometry);
+        if ( helper.emscipten ) {
+            let obj = geometry_to_obj(helper.meshes[helper.mesh].geometry);
+            let perc = v / helper.meshes[helper.mesh].geometry.faces.length;
+            let blob = new Blob([obj], {
+                type: 'text/plain'
+            });
+            let name = `em${Math.round(Math.random()*0xffffff)}.obj`;
+            let file = new File([blob], name);
 
-        let o = {
-            geometry: geometry,
-            target: v,
-            options: {
+            tt.domElement.style.opacity = .2;
+            tt.domElement.style.pointerEvents = "none";
+            wl.setValue('working...');
+
+            emscipten_worker.postMessage({
+                blob:file,
+                percentage: perc,
+                simplify_name: name,
                 agressiveness: helper.agressiveness,
                 recompute: helper.recompute,
                 update: helper.update
-            },
-            vertices: new Float32Array( geometry.triangles.length * 3 * 3),
-            uvs: new Float32Array( geometry.triangles.length * 3 * 2 ),
-            indices: new Uint32Array( geometry.triangles.length * 3 )
-        };
+            });
+        } else {
+            let geometry = geometry_to_simplify(helper.meshes[helper.mesh].geometry);
 
-        tt.domElement.style.opacity = .2;
-        tt.domElement.style.pointerEvents = "none";
-        wl.setValue('working...');
-        worker.postMessage( o, [ o.vertices.buffer, o.indices.buffer ] );
+            let o = {
+                geometry: geometry,
+                target: v,
+                options: {
+                    agressiveness: helper.agressiveness,
+                    recompute: helper.recompute,
+                    update: helper.update
+                },
+                vertices: new Float32Array( geometry.triangles.length * 3 * 3),
+                uvs: new Float32Array( geometry.triangles.length * 3 * 2 ),
+                indices: new Uint32Array( geometry.triangles.length * 3 )
+            };
+
+            tt.domElement.style.opacity = .2;
+            tt.domElement.style.pointerEvents = "none";
+            wl.setValue('working...');
+            worker.postMessage( o, [ o.vertices.buffer, o.indices.buffer ] );
+        }
+
     });
 
     gui.add(helper, 'agressiveness', 1, 20).step(1);
-    gui.add(helper, 'update', 1, 10).step(1);
-    gui.add(helper, 'recompute');
+    let ctl_update = gui.add(helper, 'update', 1, 10).step(1);
+    let ctl_recompute = gui.add(helper, 'recompute');
 
     worker.addEventListener('message', (e) => {
 
@@ -490,5 +740,22 @@ function initGUI () {
             tt.domElement.style.pointerEvents = "auto";
             wl.setValue(`decimate ${e.data.took}ms`);
         }
+    }, false);
+
+    emscipten_worker.addEventListener('message', (e) => {
+
+        if ( e.data.blob instanceof Blob ) {
+            console.log('receiving blob')
+            var reader = new FileReader();
+            reader.onload = () => {
+                console.log('read file')
+                mesh.geometry = obj_to_geometry( reader.result );
+                tt.domElement.style.opacity = 1;
+                tt.domElement.style.pointerEvents = "auto";
+                wl.setValue(`decimate ${e.data.took}ms`);
+            }
+            reader.readAsText(e.data.blob);
+        }
+
     }, false);
 }
